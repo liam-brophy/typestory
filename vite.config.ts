@@ -4,6 +4,8 @@ import { defineConfig } from 'vite'
 export default defineConfig({
   root: 'demo',
   base: './',
-  build: { outDir: '../dist-demo', emptyOutDir: true },
+  // Fonts are inlined so the demo is self-contained wherever it's hosted
+  // (claude.ai artifacts only allow fonts from data: URIs or Google Fonts).
+  build: { outDir: '../dist-demo', emptyOutDir: true, assetsInlineLimit: 200_000 },
   server: { host: true },
 })
