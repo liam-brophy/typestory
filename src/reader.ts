@@ -42,7 +42,6 @@ export class Reader {
   private raf = 0
   private lastFrame = 0
   private lastChapter = -1
-  private scrollStart: number | null = null
   private resizeObs: ResizeObserver
   private needsReflow = true
   private wasMoving = false
@@ -213,9 +212,6 @@ export class Reader {
   // ── frame loop ──────────────────────────────────────────────
 
   private onScroll = () => {
-    const top = this.viewTop()
-    if (this.scrollStart === null) this.scrollStart = top
-    else if (Math.abs(top - this.scrollStart) > 48) this.rail.noteReading()
     this.request()
   }
 

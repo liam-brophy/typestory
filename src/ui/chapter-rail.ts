@@ -4,8 +4,9 @@ export type RailMode = 'auto' | 'open' | 'closed'
 
 /**
  * The contents rail down the left edge: one tick per chapter.
- * Collapsed (while reading) it shows ticks only; open it shows titles beside them.
- * In 'auto' it collapses as soon as you scroll and opens on hover or keyboard focus.
+ * Collapsed it shows ticks only; open it shows titles beside them.
+ * In 'auto' it rests collapsed, unfolds on hover or keyboard focus, and
+ * unfolds briefly on its own when the reader crosses into a new chapter.
  */
 export class ChapterRail {
   readonly el: HTMLElement
@@ -14,8 +15,10 @@ export class ChapterRail {
   private items: HTMLLIElement[] = []
   private current = -1
   private hovering = false
-  // On small screens the open rail covers the text, so start collapsed there.
-  private reading = matchMedia('(max-width: 719px)').matches
+  private peeking = false
+  private peekTimer = 0
+  /** How long the rail stays unfolded after a chapter change, in ms. */
+  peekDuration = 2400
 
   constructor(
     parent: HTMLElement,
@@ -65,15 +68,9 @@ export class ChapterRail {
     this.sync()
   }
 
-  /** Call on scroll: in auto mode, reading collapses the rail. */
-  noteReading(): void {
-    if (this.reading) return
-    this.reading = true
-    this.sync()
-  }
-
   setCurrent(index: number, progress: number): void {
     if (index !== this.current) {
+      if (this.current !== -1) this.peek()
       this.items.forEach((li, i) => {
         li.classList.toggle('is-current', i === index)
         li.classList.toggle('is-read', i < index)
@@ -87,7 +84,21 @@ export class ChapterRail {
   private isOpen(): boolean {
     if (this.mode === 'open') return true
     if (this.mode === 'closed') return this.hovering
-    return this.hovering || !this.reading
+    return this.hovering || this.peeking
+  }
+
+  /** Unfold momentarily, e.g. on entering a new chapter. Skipped on small screens, where the open rail covers the text. */
+  private peek(): void {
+    if (this.mode !== 'auto' || matchMedia('(max-width: 719px)').matches) return
+    this.peeking = true
+    this.el.classList.add('is-peeking')
+    this.sync()
+    clearTimeout(this.peekTimer)
+    this.peekTimer = window.setTimeout(() => {
+      this.peeking = false
+      this.el.classList.remove('is-peeking')
+      this.sync()
+    }, this.peekDuration)
   }
 
   private sync(): void {

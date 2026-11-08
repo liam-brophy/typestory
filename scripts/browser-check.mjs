@@ -71,6 +71,16 @@ const results = {}
   results.desktopWrap2 = await compareWrapping(page)
   results.position = await page.evaluate(() => window.reader.position)
 
+  // Rail: collapsed at rest, peeks on entering a new chapter, folds again.
+  await page.mouse.move(1000, 500)
+  results.railAtRest = await page.evaluate(() => document.querySelector('.ts-rail').classList.contains('is-open'))
+  await page.evaluate(() => window.reader.goToChapter(2, 'instant'))
+  await page.waitForTimeout(300)
+  results.railPeek = await page.evaluate(() => document.querySelector('.ts-rail').classList.contains('is-open'))
+  await page.screenshot({ path: out + 'desktop-peek.png' })
+  await page.waitForTimeout(2600)
+  results.railAfterPeek = await page.evaluate(() => document.querySelector('.ts-rail').classList.contains('is-open'))
+
   // Drag the seed figure into the text and hold it there.
   await page.evaluate(() => window.reader.goToChapter(1, 'instant'))
   await page.waitForTimeout(400)

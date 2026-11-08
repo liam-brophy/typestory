@@ -2,8 +2,8 @@
 
 A web e-reading framework. Text is typeset with [Pretext](https://github.com/chenglou/pretext), so the reader knows the exact position of every line before painting it. That's what lets figures in the margin step into the text and push the words aside.
 
-- **Progress rule.** A thin rule runs along the top, with a heavier segment that grows across as you read the current chapter.
-- **Chapter rail.** One tick per chapter down the left edge. It shows titles at rest and collapses to ticks once you start reading. Hover, focus, or the menu button opens it again. On small screens it becomes a menu button.
+- **Progress rule.** A thin rule runs along the top, with a heavier segment that grows across as you read the current chapter. It tracks the chapter only, not the whole book.
+- **Chapter rail.** One tick per chapter down the left edge, collapsed while you read. It unfolds to show titles on mouseover or keyboard focus, and for a moment on its own when you cross into a new chapter. The menu button pins it open. On small screens it becomes a menu button.
 - **Measure.** A centred, flush-left / ragged-right column at a comfortable reading width (≈ 66 characters).
 - **Margin figures.** Line drawings anchored beside a paragraph, with scroll-linked animation hooks. They can be dragged into the text, which reflows around them live, and they spring home when released.
 - Light and dark themes, window or embedded scrolling, virtualized rendering for book-length texts.
