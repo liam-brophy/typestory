@@ -11,7 +11,7 @@ import type { Book, Run } from '../types'
 import { fontString, type TextStyle, type Typography } from '../typography'
 import type { Field } from './field'
 
-export type BlockKind = 'label' | 'heading' | 'paragraph' | 'quote' | 'break'
+export type BlockKind = 'label' | 'heading' | 'subhead' | 'paragraph' | 'quote' | 'break'
 
 export type PlacedLine = {
   /** Left edge in column coordinates. */
@@ -64,23 +64,53 @@ export class DocumentLayout {
 
   constructor(public book: Book, public typo: Typography) {}
 
-  /** One-time Pretext preparation. Call after fonts have loaded. */
-  prepare(): void {
+  /**
+   * Pretext preparation. Call after fonts have loaded. When the book is
+   * unchanged and a block's font string is the same as last time, its prepared
+   * handle is reused: changing spacing or measure never re-measures text.
+   * Returns how many blocks had to be prepared from scratch.
+   */
+  prepare(): number {
     const t = this.typo
+    const previous = this.blocks
     const blocks: LayoutBlock[] = []
-    const push = (b: Omit<LayoutBlock, 'index' | 'top' | 'height' | 'lines' | 'shaped' | 'layoutWidth' | 'version' | 'gapBefore' | 'left' | 'right' | 'firstIndent'>) =>
-      blocks.push({ ...b, index: blocks.length, top: 0, height: 0, lines: [], shaped: false, layoutWidth: -1, version: 0, gapBefore: 0, left: 0, right: 0, firstIndent: 0 })
+    let fresh = 0
+    const styleFor = (kind: BlockKind) =>
+      kind === 'label' ? t.label : kind === 'heading' ? t.heading : kind === 'subhead' ? t.subhead : t.body
+    const push = (chapter: number, sourceIndex: number, kind: BlockKind, runs: Run[]) => {
+      const style = styleFor(kind)
+      const old = previous[blocks.length]
+      let prepared: PreparedRichInline | null = null
+      if (kind !== 'break') {
+        const reuse = old && old.kind === kind && old.runs === runs && old.prepared && fontString(old.style) === fontString(style)
+          && old.style.letterSpacing === style.letterSpacing
+        prepared = reuse ? old.prepared : prep(runs, style)
+        if (!reuse) fresh++
+      }
+      blocks.push({
+        index: blocks.length, chapter, sourceIndex, kind, runs, style, prepared,
+        top: 0, height: 0, lines: [], shaped: false, layoutWidth: -1, version: (old?.version ?? 0) + 1,
+        gapBefore: 0, left: 0, right: 0, firstIndent: 0,
+      })
+    }
 
     this.book.chapters.forEach((ch, ci) => {
-      if (ch.label) push({ chapter: ci, sourceIndex: -1, kind: 'label', runs: [{ text: ch.label }], style: t.label, prepared: prep([{ text: ch.label }], t.label) })
-      push({ chapter: ci, sourceIndex: -1, kind: 'heading', runs: [{ text: ch.title }], style: t.heading, prepared: prep([{ text: ch.title }], t.heading) })
-      ch.blocks.forEach((b, bi) => {
-        if (b.kind === 'break') push({ chapter: ci, sourceIndex: bi, kind: 'break', runs: [], style: t.body, prepared: null })
-        else push({ chapter: ci, sourceIndex: bi, kind: b.kind, runs: b.runs, style: t.body, prepared: prep(b.runs, t.body) })
-      })
+      if (ch.label) push(ci, -1, 'label', this.titleRuns(ch, 'label'))
+      push(ci, -1, 'heading', this.titleRuns(ch, 'title'))
+      ch.blocks.forEach((b, bi) => push(ci, bi, b.kind, b.kind === 'break' ? [] : b.runs))
     })
     this.blocks = blocks
     this.assignSpacing()
+    return fresh
+  }
+
+  // Stable run arrays for titles so prepared handles can be reused by identity.
+  private titleCache = new Map<string, Run[]>()
+  private titleRuns(ch: { id: string; title: string; label?: string }, which: 'title' | 'label'): Run[] {
+    const key = `${which}:${ch.id}:${which === 'title' ? ch.title : ch.label}`
+    let runs = this.titleCache.get(key)
+    if (!runs) this.titleCache.set(key, (runs = [{ text: (which === 'title' ? ch.title : ch.label) ?? '' }]))
+    return runs
   }
 
   private assignSpacing(): void {
@@ -93,12 +123,14 @@ export class DocumentLayout {
       if (chapterStart) b.gapBefore = b.chapter === 0 ? 0 : lh * 5
       else if (b.kind === 'heading') b.gapBefore = Math.round(lh * 0.25)
       else if (prev!.kind === 'heading') b.gapBefore = Math.round(lh * 1.5)
+      else if (b.kind === 'subhead') b.gapBefore = Math.round(lh * 1.4)
+      else if (prev!.kind === 'subhead') b.gapBefore = Math.round(lh * 0.5)
       else if (b.kind === 'break' || prev!.kind === 'break') b.gapBefore = Math.round(lh * 0.5)
       else if (b.kind === 'quote' || prev!.kind === 'quote') b.gapBefore = Math.round(lh * 0.75)
       else if (t.paragraphStyle === 'spaced') b.gapBefore = Math.round(lh * 0.6)
       else {
         b.gapBefore = 0
-        b.firstIndent = t.indent
+        if (b.kind === 'paragraph' && prev!.kind === 'paragraph') b.firstIndent = t.indent
       }
       prev = b
     }

@@ -6,6 +6,7 @@ type Mounted = { el: HTMLElement; version: number; top: number }
 const TAG: Record<LayoutBlock['kind'], string> = {
   label: 'div',
   heading: 'h2',
+  subhead: 'h3',
   paragraph: 'p',
   quote: 'blockquote',
   break: 'div',

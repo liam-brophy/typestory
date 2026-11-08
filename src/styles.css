@@ -16,14 +16,6 @@
   transition: background-color 300ms var(--ts-ease), color 300ms var(--ts-ease);
 }
 
-.ts-root[data-theme="dark"] {
-  --ts-paper: #0c1018;
-  --ts-ink: #e7e4dd;
-  --ts-muted: #6c7789;
-  --ts-stroke: #9fb8e8;
-  --ts-stroke-soft: rgba(159, 184, 232, 0.32);
-}
-
 .ts-root *, .ts-root *::before, .ts-root *::after { box-sizing: border-box; }
 
 /* ── frame ─────────────────────────────────────────────── */
@@ -137,6 +129,7 @@
   flex-direction: column;
   font-family: var(--ts-ui-font);
   font-size: 13px;
+  z-index: 2;
   line-height: 1.2;
 }
 
@@ -169,7 +162,10 @@
   min-height: 30px;
   padding-left: 20px;
   color: var(--ts-muted);
+  transition: min-height 240ms var(--ts-ease);
 }
+.ts-rail:not(.is-open) .ts-rail-item { min-height: var(--ts-rail-step, 30px); }
+.ts-rail.is-dense:not(.is-open) .ts-rail-list { overflow: hidden; }
 .ts-rail-item:focus-visible .ts-rail-label { outline: 1px solid var(--ts-stroke); outline-offset: 3px; }
 
 .ts-tick {
@@ -202,25 +198,120 @@
 /* collapsed: fewer, quieter ticks */
 .ts-rail:not(.is-open) li:not(.is-current) .ts-tick { opacity: 0.3; }
 
-/* ── theme toggle ──────────────────────────────────────── */
+/* ── settings ──────────────────────────────────────────── */
 
-.ts-theme {
+.ts-settings-button {
   all: unset;
   pointer-events: auto;
   cursor: pointer;
   position: absolute;
   top: 18px;
   right: 18px;
+  z-index: 3;
   width: 38px;
   height: 38px;
   display: grid;
   place-items: center;
   border: 1px solid var(--ts-stroke);
-  color: var(--ts-stroke);
+  color: var(--ts-ink);
   background: var(--ts-paper);
+  font: 400 15px/1 var(--ts-ui-font);
+  letter-spacing: 0.01em;
 }
-.ts-theme svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.2; stroke-linecap: round; stroke-linejoin: round; }
-.ts-theme:focus-visible { outline: 1px solid var(--ts-stroke); outline-offset: 3px; }
+.ts-settings-button.is-active { background: var(--ts-ink); color: var(--ts-paper); border-color: var(--ts-ink); }
+.ts-settings-button:focus-visible { outline: 1px solid var(--ts-stroke); outline-offset: 3px; }
+
+.ts-settings {
+  position: absolute;
+  top: 64px;
+  right: 18px;
+  z-index: 3;
+  width: 320px;
+  max-height: calc(100% - 82px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 6px 20px 20px;
+  background: var(--ts-paper);
+  color: var(--ts-ink);
+  border: 1px solid var(--ts-stroke);
+  font: 400 13px/1.4 var(--ts-ui-font);
+  scrollbar-width: thin;
+}
+.ts-settings[hidden] { display: none; }
+/* Zero-specificity reset so the component rules below always win. */
+:where(.ts-settings button) { all: unset; box-sizing: border-box; cursor: pointer; }
+:where(.ts-settings button):focus-visible { outline: 1px solid var(--ts-stroke); outline-offset: 2px; }
+:where(.ts-settings button):disabled { cursor: default; opacity: 0.3; }
+
+.ts-set-section { padding: 16px 0 0; }
+.ts-set-section + .ts-set-section { border-top: 1px solid var(--ts-stroke-soft); margin-top: 16px; }
+.ts-set-label {
+  margin: 0 0 10px;
+  font: 500 11px/1 var(--ts-ui-font);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ts-muted);
+}
+
+.ts-set-book-title { font-size: 15px; line-height: 1.3; }
+.ts-set-book-author { color: var(--ts-muted); margin-top: 2px; }
+.ts-set-wide-button {
+  display: block;
+  width: 100%;
+  margin-top: 12px;
+  padding: 9px 12px;
+  border: 1px solid var(--ts-stroke);
+  text-align: center;
+}
+.ts-set-wide-button:hover { background: var(--ts-ink); color: var(--ts-paper); }
+.ts-set-hint { margin: 8px 0 0; color: var(--ts-muted); font-size: 12px; }
+.ts-set-status { margin: 10px 0 0; font-size: 12px; }
+.ts-set-status.is-error { color: #b4442a; }
+
+.ts-set-swatches { display: flex; flex-wrap: wrap; gap: 8px; }
+.ts-set-swatch { display: flex; align-items: center; gap: 8px; padding: 6px 12px 6px 6px; border: 1px solid var(--ts-stroke-soft); }
+.ts-set-swatch.is-selected { border-color: var(--ts-stroke); box-shadow: inset 0 0 0 1px var(--ts-stroke); }
+.ts-set-swatch-chip { width: 22px; height: 22px; border: 1px solid; display: grid; place-items: center; }
+.ts-set-swatch-chip span { width: 10px; height: 1px; }
+
+.ts-set-pairings { display: grid; gap: 4px; }
+.ts-set-pairing { display: flex; align-items: center; gap: 14px; padding: 8px 10px; border: 1px solid transparent; }
+.ts-set-pairing:hover { border-color: var(--ts-stroke-soft); }
+.ts-set-pairing.is-selected { border-color: var(--ts-stroke); }
+.ts-set-specimen { flex: none; width: 40px; font-size: 26px; line-height: 1; text-align: center; }
+.ts-set-pairing-text { display: grid; gap: 2px; min-width: 0; }
+.ts-set-pairing-name { font-size: 16px; line-height: 1.2; }
+.ts-set-pairing-note { color: var(--ts-muted); font-size: 12px; }
+
+.ts-set-stepper { display: flex; align-items: center; gap: 12px; }
+.ts-set-step { width: 34px; height: 34px; display: grid; place-items: center; border: 1px solid var(--ts-stroke); font-family: var(--ts-ui-font); }
+.ts-set-step.is-small { font-size: 12px; }
+.ts-set-step.is-large { font-size: 19px; }
+.ts-set-dots { flex: 1; display: flex; align-items: center; justify-content: space-between; padding: 0 4px; }
+.ts-set-dot { width: 6px; height: 6px; border: 1px solid var(--ts-stroke); border-radius: 50%; }
+.ts-set-dot.is-on { background: var(--ts-stroke); }
+
+.ts-set-segmented { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; border: 1px solid var(--ts-stroke); }
+.ts-set-segment { padding: 8px 6px; text-align: center; }
+.ts-set-segment + .ts-set-segment { border-left: 1px solid var(--ts-stroke-soft); }
+.ts-set-segment.is-selected { background: var(--ts-ink); color: var(--ts-paper); }
+
+/* ── drop to open ──────────────────────────────────────── */
+
+.ts-drop-veil {
+  position: absolute;
+  inset: 12px;
+  z-index: 4;
+  display: grid;
+  place-items: center;
+  border: 1px dashed var(--ts-stroke);
+  background: color-mix(in srgb, var(--ts-paper) 88%, transparent);
+  font: 400 15px/1 var(--ts-ui-font);
+  opacity: 0;
+  pointer-events: none !important;
+  transition: opacity 160ms var(--ts-ease);
+}
+.ts-root.is-dropping .ts-drop-veil { opacity: 1; }
 
 /* ── margin figures ────────────────────────────────────── */
 
@@ -243,6 +334,8 @@
 /* ── small screens ─────────────────────────────────────── */
 
 @media (max-width: 719px) {
+  .ts-settings-button { top: 12px; right: 12px; width: 34px; height: 34px; }
+  .ts-settings { top: 54px; right: 8px; left: 8px; width: auto; max-height: calc(100% - 64px); }
   /* The margin is too narrow for ticks: collapse to a menu button, open as a panel. */
   .ts-rail { top: 12px; transform: none; max-height: calc(100% - 24px); }
   .ts-rail-toggle { padding: 12px 10px 12px 14px; }
@@ -254,7 +347,6 @@
     padding-bottom: 12px;
   }
   .ts-rail-item { padding-left: 14px; }
-  .ts-theme { top: 12px; right: 12px; width: 34px; height: 34px; }
 }
 
 @media (prefers-reduced-motion: reduce) {

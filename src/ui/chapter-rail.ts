@@ -59,7 +59,30 @@ export class ChapterRail {
       if (!this.el.contains(e.relatedTarget as Node)) { this.hovering = false; this.sync() }
     })
     parent.append(this.el)
+    this.fit()
+    window.addEventListener('resize', this.fit)
     this.sync()
+  }
+
+  private centreCurrent(): void {
+    const li = this.items[this.current]
+    if (!li) return
+    const target = li.offsetTop - this.list.offsetTop - (this.list.clientHeight - li.offsetHeight) / 2
+    this.list.scrollTo({ top: Math.max(0, target), behavior: 'smooth' })
+  }
+
+  destroy(): void {
+    clearTimeout(this.peekTimer)
+    window.removeEventListener('resize', this.fit)
+    this.el.remove()
+  }
+
+  /** Long books: squeeze collapsed ticks so every chapter fits down the edge. */
+  private fit = () => {
+    const n = Math.max(1, this.items.length)
+    const step = Math.max(5, Math.min(30, (window.innerHeight * 0.7) / n))
+    this.el.style.setProperty('--ts-rail-step', `${step.toFixed(2)}px`)
+    this.el.classList.toggle('is-dense', step < 18)
   }
 
   setMode(mode: RailMode): void {
@@ -70,6 +93,7 @@ export class ChapterRail {
 
   setCurrent(index: number, progress: number): void {
     if (index !== this.current) {
+      const wasOpen = this.el.classList.contains('is-open')
       if (this.current !== -1) this.peek()
       this.items.forEach((li, i) => {
         li.classList.toggle('is-current', i === index)
@@ -77,6 +101,7 @@ export class ChapterRail {
         li.querySelector('button')!.toggleAttribute('aria-current', i === index)
       })
       this.current = index
+      if (wasOpen) this.centreCurrent()
     }
     this.el.style.setProperty('--ts-chapter-progress', progress.toFixed(3))
   }
@@ -103,6 +128,12 @@ export class ChapterRail {
 
   private sync(): void {
     const open = this.isOpen()
+    if (open && !this.el.classList.contains('is-open')) {
+      // Bring the current chapter into view in a long, scrolling list.
+      // Wait for collapsed ticks to grow to full rows, then centre the current
+      // chapter by scrolling the list itself (never the page).
+      setTimeout(() => this.centreCurrent(), 280)
+    }
     this.el.classList.toggle('is-open', open)
     this.toggle.setAttribute('aria-expanded', String(open))
     this.toggle.setAttribute('aria-label', open ? 'Collapse chapters' : 'Show chapters')

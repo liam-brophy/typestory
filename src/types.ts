@@ -8,6 +8,8 @@ export type Run = {
 export type Block =
   | { kind: 'paragraph'; runs: Run[] }
   | { kind: 'quote'; runs: Run[] }
+  /** A heading inside a chapter (EPUB h2–h6 below the chapter title). */
+  | { kind: 'subhead'; runs: Run[] }
   | { kind: 'break' }
 
 export type Chapter = {

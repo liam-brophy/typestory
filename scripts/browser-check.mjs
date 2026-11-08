@@ -126,7 +126,9 @@ const results = {}
   })
 
   // Dark theme + open rail.
-  await page.click('.ts-theme')
+  await page.click('.ts-settings-button')
+  await page.click('.ts-set-swatch[data-value="dark"]')
+  await page.keyboard.press('Escape')
   await page.mouse.move(30, 450)
   await page.waitForTimeout(500)
   await page.screenshot({ path: out + 'desktop-dark-rail.png' })

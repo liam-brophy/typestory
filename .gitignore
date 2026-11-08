@@ -4,3 +4,4 @@ dist-demo
 .DS_Store
 scripts/out
 *.log
+scripts/fixtures/*.epub

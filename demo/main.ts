@@ -1,13 +1,8 @@
-import '@fontsource/newsreader/latin-400.css'
-import '@fontsource/newsreader/latin-400-italic.css'
-import '@fontsource/newsreader/latin-500.css'
-import '@fontsource/newsreader/latin-500-italic.css'
-import '@fontsource/newsreader/latin-600.css'
-import '@fontsource/newsreader/latin-600-italic.css'
-import '@fontsource/inter/latin-400.css'
+import './fonts'
 import '../src/styles.css' // as a consuming site would: import 'typestory/style.css'
 import { parseMarkdownBook, Reader, type Book } from '../src'
 import { CUBE, SEED } from './figures'
+import { forgetLastBook, loadLastBook, saveLastBook } from './library'
 import sample from './sample.md?raw'
 
 const params = new URLSearchParams(location.search)
@@ -30,6 +25,8 @@ let reader: Reader
 try {
   reader = await Reader.mount(host, {
     book,
+    allowUpload: true,
+    onBookOpened: (_, file) => void saveLastBook(file),
     rail: (params.get('rail') as 'auto' | 'open' | 'closed') ?? 'auto',
   })
 } catch (err) {
@@ -62,6 +59,13 @@ reader.addFigure({
     art.style.transform = `rotate(${(progress * 90).toFixed(2)}deg) scale(${breathe.toFixed(4)})`
   },
 })
+
+// Reopen the reader's last EPUB, unless ?sample asks for the demo text.
+if (params.has('sample') || location.hash === '#sample') void forgetLastBook()
+else {
+  const last = await loadLastBook()
+  if (last) await reader.openFile(last)
+}
 
 // Handy while developing.
 Object.assign(window, { reader })
