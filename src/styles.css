@@ -1,0 +1,262 @@
+/* Typestory — base styles. Override the custom properties to theme it. */
+
+.ts-root {
+  --ts-paper: #fbf9f5;
+  --ts-ink: #1b1a17;
+  --ts-muted: #8d887f;
+  --ts-stroke: #1b1a17;
+  --ts-stroke-soft: rgba(27, 26, 23, 0.28);
+  --ts-ui-font: "Inter", "Helvetica Neue", Arial, sans-serif;
+  --ts-ease: cubic-bezier(0.2, 0.7, 0.2, 1);
+
+  background: var(--ts-paper);
+  color: var(--ts-ink);
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+  transition: background-color 300ms var(--ts-ease), color 300ms var(--ts-ease);
+}
+
+.ts-root[data-theme="dark"] {
+  --ts-paper: #0c1018;
+  --ts-ink: #e7e4dd;
+  --ts-muted: #6c7789;
+  --ts-stroke: #9fb8e8;
+  --ts-stroke-soft: rgba(159, 184, 232, 0.32);
+}
+
+.ts-root *, .ts-root *::before, .ts-root *::after { box-sizing: border-box; }
+
+/* ── frame ─────────────────────────────────────────────── */
+
+.ts-window { min-height: 100vh; }
+.ts-window .ts-chrome { position: fixed; inset: 0; }
+
+.ts-element { position: relative; height: 100%; overflow: hidden; }
+.ts-element .ts-scroller { position: absolute; inset: 0; overflow-y: auto; overscroll-behavior: contain; }
+.ts-element .ts-chrome { position: absolute; inset: 0; }
+
+.ts-chrome { pointer-events: none; z-index: 10; }
+.ts-chrome > * { pointer-events: auto; }
+
+/* Paper fade under the top edge so lines dissolve rather than collide with the rule. */
+.ts-chrome::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 64px;
+  background: linear-gradient(var(--ts-paper) 35%, transparent);
+  pointer-events: none;
+}
+
+/* ── text column ───────────────────────────────────────── */
+
+.ts-column {
+  position: relative;
+  margin: 0 auto;
+  opacity: 0;
+  transition: opacity 400ms var(--ts-ease);
+}
+.ts-root.is-ready .ts-column { opacity: 1; }
+
+.ts-text, .ts-figures { position: absolute; inset: 0; }
+.ts-figures { pointer-events: none; }
+
+/*
+ * Pretext decides every line break, so the browser must not second-guess it:
+ * default kerning and word spacing, no optimizeLegibility, no hyphens:auto,
+ * no text-wrap:pretty. Each line is painted on its own with white-space: pre.
+ */
+.ts-block {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  font-kerning: auto;
+  word-spacing: normal;
+  text-rendering: auto;
+  hyphens: manual;
+  overflow-wrap: break-word;
+  will-change: transform;
+}
+
+.ts-line {
+  position: absolute;
+  left: 0;
+  top: 0;
+  white-space: pre;
+}
+.ts-line em, .ts-line strong { font-synthesis: none; }
+
+.ts-label { color: var(--ts-muted); }
+.ts-heading { letter-spacing: -0.01em; }
+
+.ts-break > span {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 40px;
+  margin-left: -20px;
+  border-top: 1px solid var(--ts-stroke);
+}
+
+/* ── progress rule ─────────────────────────────────────── */
+
+.ts-rule {
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 4px;
+}
+.ts-rule::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 1px;
+  background: var(--ts-stroke);
+}
+.ts-rule-bar {
+  position: absolute;
+  inset: 0;
+  height: 4px;
+  background: var(--ts-stroke);
+  transform: scaleX(0);
+  transform-origin: left center;
+  will-change: transform;
+}
+
+/* ── chapter rail ──────────────────────────────────────── */
+
+.ts-rail {
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  max-height: 76vh;
+  display: flex;
+  flex-direction: column;
+  font-family: var(--ts-ui-font);
+  font-size: 13px;
+  line-height: 1.2;
+}
+
+.ts-rail-toggle {
+  all: unset;
+  cursor: pointer;
+  display: grid;
+  gap: 3px;
+  width: 16px;
+  padding: 10px 0 14px 20px;
+}
+.ts-rail-toggle span { display: block; height: 1px; background: var(--ts-stroke); }
+.ts-rail-toggle:focus-visible { outline: 1px solid var(--ts-stroke); outline-offset: 4px; }
+
+.ts-rail-list {
+  list-style: none;
+  margin: 0;
+  padding: 0 24px 0 0;
+  overflow-y: auto;
+  scrollbar-width: none;
+}
+.ts-rail-list::-webkit-scrollbar { display: none; }
+
+.ts-rail-item {
+  all: unset;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-height: 30px;
+  padding-left: 20px;
+  color: var(--ts-muted);
+}
+.ts-rail-item:focus-visible .ts-rail-label { outline: 1px solid var(--ts-stroke); outline-offset: 3px; }
+
+.ts-tick {
+  flex: none;
+  width: 18px;
+  height: 1px;
+  background: var(--ts-stroke);
+  opacity: 0.45;
+  transition: width 320ms var(--ts-ease), opacity 320ms var(--ts-ease);
+}
+.is-read .ts-tick { width: 26px; opacity: 0.7; }
+.is-current .ts-tick { width: 44px; opacity: 1; }
+.ts-rail-item:hover .ts-tick { opacity: 1; }
+
+.ts-rail-label {
+  max-width: 220px;
+  padding: 6px 10px;
+  border: 1px solid transparent;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  opacity: 0;
+  transform: translateX(-6px);
+  transition: opacity 240ms var(--ts-ease), transform 240ms var(--ts-ease), color 240ms;
+}
+.ts-rail.is-open .ts-rail-label { opacity: 1; transform: none; }
+.ts-rail-item:hover .ts-rail-label { color: var(--ts-ink); }
+.is-current .ts-rail-label { color: var(--ts-ink); border-color: var(--ts-stroke); }
+
+/* collapsed: fewer, quieter ticks */
+.ts-rail:not(.is-open) li:not(.is-current) .ts-tick { opacity: 0.3; }
+
+/* ── theme toggle ──────────────────────────────────────── */
+
+.ts-theme {
+  all: unset;
+  pointer-events: auto;
+  cursor: pointer;
+  position: absolute;
+  top: 18px;
+  right: 18px;
+  width: 38px;
+  height: 38px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--ts-stroke);
+  color: var(--ts-stroke);
+  background: var(--ts-paper);
+}
+.ts-theme svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.2; stroke-linecap: round; stroke-linejoin: round; }
+.ts-theme:focus-visible { outline: 1px solid var(--ts-stroke); outline-offset: 3px; }
+
+/* ── margin figures ────────────────────────────────────── */
+
+.ts-figure {
+  position: absolute;
+  left: 0;
+  top: 0;
+  color: var(--ts-stroke);
+  pointer-events: auto;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  will-change: transform;
+}
+.ts-figure.is-draggable { cursor: grab; }
+.ts-figure.is-dragging { cursor: grabbing; }
+.ts-figure-art { width: 100%; height: 100%; }
+.ts-figure-art svg { display: block; width: 100%; height: 100%; overflow: visible; }
+
+/* ── small screens ─────────────────────────────────────── */
+
+@media (max-width: 719px) {
+  /* The margin is too narrow for ticks: collapse to a menu button, open as a panel. */
+  .ts-rail { top: 12px; transform: none; max-height: calc(100% - 24px); }
+  .ts-rail-toggle { padding: 12px 10px 12px 14px; }
+  .ts-rail:not(.is-open) .ts-rail-list { display: none; }
+  .ts-rail.is-open {
+    background: var(--ts-paper);
+    border: 1px solid var(--ts-stroke-soft);
+    border-left: 0;
+    padding-bottom: 12px;
+  }
+  .ts-rail-item { padding-left: 14px; }
+  .ts-theme { top: 12px; right: 12px; width: 34px; height: 34px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ts-root, .ts-column, .ts-tick, .ts-rail-label { transition: none; }
+}
