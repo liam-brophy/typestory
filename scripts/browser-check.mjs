@@ -4,7 +4,8 @@
 // - Saves screenshots to scripts/out/.
 import { chromium } from 'playwright'
 import { createServer } from 'vite'
-import { mkdirSync } from 'node:fs'
+import { mkdirSync, existsSync, readFileSync } from 'node:fs'
+import http from 'node:http'
 
 const out = new URL('./out/', import.meta.url).pathname
 mkdirSync(out, { recursive: true })
@@ -154,6 +155,51 @@ const results = {}
     return { blocks: r.doc.blocks.length, chapters: r.doc.chapterTops.length, fullRelayoutMs: +full.toFixed(1), domBlocks: document.querySelectorAll('.ts-block').length, height: Math.round(r.doc.totalHeight) }
   })
   await page.close()
+}
+
+// ── built single-file demo inside a sandboxed, origin-less iframe
+// (how claude.ai artifacts and similar hosts serve pages). Requires `npm run build:demo`.
+if (existsSync('dist-demo/index.html')) {
+  const demoHtml = readFileSync('dist-demo/index.html')
+  const files = http.createServer((_, res) => { res.writeHead(200, { 'content-type': 'text/html' }); res.end(demoHtml) }).listen(5301)
+  const hostPage = http.createServer((_, res) => {
+    res.writeHead(200, { 'content-type': 'text/html' })
+    res.end('<!doctype html><body style="margin:0"><iframe sandbox="allow-scripts" src="http://127.0.0.1:5301/" style="width:100vw;height:100vh;border:0"></iframe></body>')
+  }).listen(5300)
+  const page = await browser.newPage({ viewport: { width: 1440, height: 900 } })
+  const errors = []
+  page.on('console', m => m.type() === 'error' && !m.text().includes('favicon') && errors.push(m.text()))
+  await page.goto('http://127.0.0.1:5300/')
+  const frame = page.frames()[1]
+  await frame.waitForSelector('.ts-root.is-ready', { timeout: 10000 }).catch(() => {})
+  await page.waitForTimeout(500)
+  results.sandboxedBuild = await frame.evaluate(() => {
+    const col = document.querySelector('.ts-column')
+    const rect = col?.getBoundingClientRect()
+    return {
+      ready: !!document.querySelector('.ts-root.is-ready'),
+      columnCentred: rect ? Math.abs(rect.left + rect.width / 2 - innerWidth / 2) < 2 : false,
+      lineIsAbsolute: getComputedStyle(document.querySelector('.ts-line')).position === 'absolute',
+      ruleVisible: !!document.querySelector('.ts-rule') && getComputedStyle(document.querySelector('.ts-rule')).position === 'absolute',
+      fontsLoaded: [...document.fonts].filter(f => f.status === 'loaded').length,
+    }
+  }).catch(e => ({ error: e.message }))
+  // Drag a figure inside the sandbox too.
+  const fig = frame.locator('.ts-figure').first()
+  const box = await fig.boundingBox()
+  if (box) {
+    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2)
+    await page.mouse.down()
+    for (let i = 1; i <= 20; i++) { await page.mouse.move(box.x + box.width / 2 - i * 25, box.y + box.height / 2); await page.waitForTimeout(16) }
+    results.sandboxedBuild.shapedWhileDragging = await frame.evaluate(() => window.reader.doc.blocks.filter(b => b.shaped).length)
+    await page.screenshot({ path: out + 'sandboxed-build-drag.png' })
+    await page.mouse.up()
+  }
+  results.sandboxedBuild.consoleErrors = errors
+  await page.close()
+  files.close(); hostPage.close()
+} else {
+  results.sandboxedBuild = 'skipped: run npm run build:demo first'
 }
 
 console.log(JSON.stringify(results, null, 2))

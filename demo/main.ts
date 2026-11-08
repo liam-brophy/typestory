@@ -5,6 +5,7 @@ import '@fontsource/newsreader/latin-500-italic.css'
 import '@fontsource/newsreader/latin-600.css'
 import '@fontsource/newsreader/latin-600-italic.css'
 import '@fontsource/inter/latin-400.css'
+import '../src/styles.css' // as a consuming site would: import 'typestory/style.css'
 import { parseMarkdownBook, Reader, type Book } from '../src'
 import { CUBE, SEED } from './figures'
 import sample from './sample.md?raw'
@@ -24,10 +25,18 @@ if (stress > 1) {
   }
 }
 
-const reader = await Reader.mount(document.getElementById('reader')!, {
-  book,
-  rail: (params.get('rail') as 'auto' | 'open' | 'closed') ?? 'auto',
-})
+const host = document.getElementById('reader')!
+let reader: Reader
+try {
+  reader = await Reader.mount(host, {
+    book,
+    rail: (params.get('rail') as 'auto' | 'open' | 'closed') ?? 'auto',
+  })
+} catch (err) {
+  // Fail visibly rather than leaving a blank page.
+  host.innerHTML = `<pre style="padding:24px;font:13px/1.5 monospace;white-space:pre-wrap">Typestory failed to start:\n${String((err as Error)?.stack ?? err)}</pre>`
+  throw err
+}
 
 reader.addFigure({
   chapter: 0,

@@ -66,7 +66,7 @@ export function applyStyle(el: HTMLElement, style: TextStyle): void {
  * Waits for every face the reader will paint, then the caller must clear Pretext's cache.
  * `document.fonts.ready` alone isn't enough: unused faces never start loading.
  */
-export async function loadFonts(typo: Typography, sample: string): Promise<void> {
+export async function loadFonts(typo: Typography, sample: string, timeoutMs = 4000): Promise<void> {
   const styles = [typo.body, typo.heading, typo.label]
   const fonts = new Set<string>()
   for (const s of styles) {
@@ -75,5 +75,8 @@ export async function loadFonts(typo: Typography, sample: string): Promise<void>
     fonts.add(fontString(s, { strong: true }))
     fonts.add(fontString(s, { em: true, strong: true }))
   }
-  await Promise.all([...fonts].map(f => document.fonts.load(f, sample).catch(() => [])))
+  const loads = Promise.all([...fonts].map(f => document.fonts.load(f, sample).catch(() => [])))
+  // Never hang on a font: after the timeout we set type with whatever is
+  // available (the caller re-prepares if a face arrives later).
+  await Promise.race([loads, new Promise(r => setTimeout(r, timeoutMs))])
 }
