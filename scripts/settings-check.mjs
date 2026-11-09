@@ -2,13 +2,20 @@
 // Run `python3 scripts/make-epubs.py` first to create the fixtures.
 import { chromium } from 'playwright'
 import { createServer } from 'vite'
-import { mkdirSync } from 'node:fs'
+import { mkdirSync, existsSync } from 'node:fs'
+
+// Use $CHROME or a system Chrome on Linux; otherwise Playwright's own Chromium
+// (install once with: npx playwright install chromium).
+function chromeOptions() {
+  const path = process.env.CHROME ?? (existsSync('/usr/bin/google-chrome') ? '/usr/bin/google-chrome' : undefined)
+  return path ? { executablePath: path } : {}
+}
 
 const out = new URL('./out/', import.meta.url).pathname
 mkdirSync(out, { recursive: true })
 const server = await createServer({ configFile: 'vite.config.ts', server: { port: 5196 }, logLevel: 'error' })
 await server.listen()
-const browser = await chromium.launch({ executablePath: process.env.CHROME ?? '/usr/bin/google-chrome' })
+const browser = await chromium.launch(chromeOptions())
 const page = await browser.newPage({ viewport: { width: 1440, height: 900 }, deviceScaleFactor: 2 })
 const errors = []
 page.on('pageerror', e => errors.push(e.message))

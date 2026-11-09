@@ -7,6 +7,13 @@ import { createServer } from 'vite'
 import { mkdirSync, existsSync, readFileSync } from 'node:fs'
 import http from 'node:http'
 
+// Use $CHROME or a system Chrome on Linux; otherwise Playwright's own Chromium
+// (install once with: npx playwright install chromium).
+function chromeOptions() {
+  const path = process.env.CHROME ?? (existsSync('/usr/bin/google-chrome') ? '/usr/bin/google-chrome' : undefined)
+  return path ? { executablePath: path } : {}
+}
+
 const out = new URL('./out/', import.meta.url).pathname
 mkdirSync(out, { recursive: true })
 
@@ -14,7 +21,7 @@ const server = await createServer({ configFile: 'vite.config.ts', server: { port
 await server.listen()
 const base = 'http://localhost:5199/'
 
-const browser = await chromium.launch({ executablePath: process.env.CHROME ?? '/usr/bin/google-chrome' })
+const browser = await chromium.launch(chromeOptions())
 
 async function open(viewport, query = '') {
   const page = await browser.newPage({ viewport, deviceScaleFactor: 2 })
