@@ -10,6 +10,10 @@ import type { Block, Book, Chapter, Run } from '../types'
  * table of contents points at anchors inside one file (common in Project
  * Gutenberg books), the file is split at those anchors.
  *
+ * Footnotes and endnotes are kept as paragraphs marked `note`, after a break at
+ * the end of their chapter. A section that is only a heading (a half-title) is
+ * dropped unless the table of contents names it.
+ *
  * Not handled yet: images, tables as tables, footnote pop-ups, right-to-left
  * page progression, fixed-layout books, DRM-protected files.
  */
@@ -100,6 +104,7 @@ export async function parseEpub(data: ArrayBuffer | Uint8Array): Promise<Book> {
     const sections = extractSections(doc.body ?? doc.documentElement, splits)
     sections.forEach((sec, i) => {
       let t = sec.title ?? (i === 0 ? fileTitle : null)
+      const inToc = !!t
       // Drop a leading heading that just repeats the chapter title, or adopt it as the title.
       const first = sec.blocks[0]
       if (first?.kind === 'subhead') {
@@ -107,8 +112,8 @@ export async function parseEpub(data: ArrayBuffer | Uint8Array): Promise<Book> {
         if (!t || sameText(ht, t)) { t = t ?? ht; sec.blocks.shift() }
       }
       if (!sec.blocks.some(b => b.kind !== 'break')) {
-        // A title page or a cover with no text: keep it only if the TOC names it.
-        if (!t) return
+        // A half-title or cover with nothing but its heading: keep it only if the TOC names it.
+        if (!inToc) return
       }
       const id = uniqueId(slug(t ?? '') || `section-${chapters.length + 1}`, usedIds)
       chapters.push({ id, title: t ?? `Section ${chapters.length + 1}`, blocks: trimBreaks(sec.blocks) })
@@ -154,10 +159,20 @@ function extractSections(root: Element, splits: Map<string, string>): Section[] 
     }
   }
 
+  // Footnotes and endnotes (EPUB 3 semantics): their paragraphs are kept, marked as notes.
+  let note = false
+  const isNote = (el: Element) =>
+    /(^|\s)(footnote|endnote|rearnote)(\s|$)/.test(el.getAttribute('epub:type') ?? '') || /^doc-(footnote|endnote)$/.test(el.getAttribute('role') ?? '')
+
   const walk = (el: Element, quote: boolean) => {
     const tag = el.localName.toLowerCase()
     if (SKIP.has(tag)) return
     startIfAnchor(el)
+    if (!note && isNote(el)) {
+      note = true
+      try { walk(el, quote) } finally { note = false }
+      return
+    }
     if (tag === 'hr') { cur().blocks.push({ kind: 'break' }); return }
     if (/(^|\s)(pagebreak|page-break)(\s|$)/.test(el.getAttribute('epub:type') ?? '')) return
     if (HEADINGS.has(tag)) {
@@ -193,6 +208,16 @@ function extractSections(root: Element, splits: Map<string, string>): Section[] 
     if (!runs.length) return
     const plain = runs.map(r => r.text).join('').trim()
     if (/^([*·•⁂~#]\s*){1,5}$/.test(plain)) { cur().blocks.push({ kind: 'break' }); return }
+    if (note) {
+      // Set the notes apart from the chapter's last paragraph, and lift the note's own number out of its text.
+      const blocks = cur().blocks
+      const last = blocks[blocks.length - 1]
+      if (last && !(last.kind === 'paragraph' && last.note !== undefined) && last.kind !== 'break') blocks.push({ kind: 'break' })
+      const m = /^\s*(\d+|[*†‡§])[.)]?\s+/.exec(runs[0].text)
+      if (m) runs[0].text = runs[0].text.slice(m[0].length)
+      blocks.push({ kind: 'paragraph', runs: runs.filter(r => r.text), note: m ? m[1] : '' })
+      return
+    }
     cur().blocks.push({ kind: quote ? 'quote' : 'paragraph', runs })
   }
 

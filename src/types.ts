@@ -6,7 +6,8 @@ export type Run = {
 }
 
 export type Block =
-  | { kind: 'paragraph'; runs: Run[] }
+  /** `note`: this paragraph is a footnote or endnote; the value is its marker ("1", "*", or "" if none). */
+  | { kind: 'paragraph'; runs: Run[]; note?: string }
   | { kind: 'quote'; runs: Run[] }
   /** A heading inside a chapter (EPUB h2–h6 below the chapter title). */
   | { kind: 'subhead'; runs: Run[] }
